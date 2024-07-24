@@ -1,8 +1,25 @@
-use axum::{response::Html, routing::get, Extension};
+use axum::{response::Html, routing::get, Extension, Json};
 use sqlx::PgPool;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 async fn index() -> Html<String> {
     Html("<h1>Hello world!</h1>".to_string())
+}
+
+#[derive(OpenApi)]
+#[openapi(paths(openapi))]
+struct ApiDoc;
+
+#[utoipa::path(
+    get,
+    path = "/api-docs/openapi.json",
+    responses(
+        (status = 200, description = "JSON file", body = ())
+    )
+)]
+async fn openapi() -> Json<utoipa::openapi::OpenApi> {
+    Json(ApiDoc::openapi())
 }
 
 #[tokio::main]
@@ -24,6 +41,8 @@ async fn main() -> anyhow::Result<()> {
 
     let router = axum::Router::new()
         .route("/", get(index))
+        .route("/swagger/openapi.json", get(openapi))
+        .merge(SwaggerUi::new("/swagger-ui"))
         .layer(Extension(extension_pool));
 
     tracing::info!("Start server...");
